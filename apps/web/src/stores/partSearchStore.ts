@@ -15,7 +15,13 @@ import {
   searchParts,
   getPartBasic,
   getPartRemarks,
+  getPartMaterials,
+  getPartProcesses,
+  getWip,
 } from "@/services/partsApi";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyData = any;
 
 interface PartSearchStore {
   // ── 検索状態 ──
@@ -31,6 +37,9 @@ interface PartSearchStore {
   selectedPartId: number | null;
   selectedBasic: PartBasic | null;
   selectedRemarks: PartRemarks | null;
+  selectedMaterials: AnyData | null;
+  selectedProcesses: AnyData | null;
+  selectedWip: AnyData[] | null;
   activeTab: PartMainTab;
   detailLoading: boolean;
 
@@ -62,6 +71,9 @@ export const usePartSearchStore = create<PartSearchStore>((set, get) => ({
   selectedPartId: null,
   selectedBasic: null,
   selectedRemarks: null,
+  selectedMaterials: null,
+  selectedProcesses: null,
+  selectedWip: null,
   activeTab: "summary",
   detailLoading: false,
 
@@ -88,7 +100,10 @@ export const usePartSearchStore = create<PartSearchStore>((set, get) => ({
         page: result.page,
       });
     } catch (e) {
-      set({ searchError: e instanceof Error ? e.message : "検索に失敗しました" });
+      set({
+        searchError:
+          e instanceof Error ? e.message : "検索に失敗しました",
+      });
     } finally {
       set({ loading: false });
     }
@@ -96,13 +111,34 @@ export const usePartSearchStore = create<PartSearchStore>((set, get) => ({
 
   // ── 部品選択 ──
   selectPart: async (partId) => {
-    set({ selectedPartId: partId, detailLoading: true, activeTab: "summary" });
+    set({
+      selectedPartId: partId,
+      detailLoading: true,
+      activeTab: "summary",
+      // 前の部品データをリセット
+      selectedBasic: null,
+      selectedRemarks: null,
+      selectedMaterials: null,
+      selectedProcesses: null,
+      selectedWip: null,
+    });
     try {
-      const [basic, remarks] = await Promise.all([
-        getPartBasic(partId),
-        getPartRemarks(partId),
-      ]);
-      set({ selectedBasic: basic, selectedRemarks: remarks });
+      // 基本データを並列取得（サマリータブに必要な全データ）
+      const [basic, remarks, materials, processes, wip] =
+        await Promise.all([
+          getPartBasic(partId),
+          getPartRemarks(partId),
+          getPartMaterials(partId),
+          getPartProcesses(partId),
+          getWip(partId),
+        ]);
+      set({
+        selectedBasic: basic,
+        selectedRemarks: remarks,
+        selectedMaterials: materials,
+        selectedProcesses: processes,
+        selectedWip: wip,
+      });
     } catch (e) {
       console.error("部品詳細取得エラー:", e);
     } finally {

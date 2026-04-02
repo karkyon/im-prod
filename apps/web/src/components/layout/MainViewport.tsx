@@ -4,14 +4,16 @@ import { usePartSearchStore } from "@/stores/partSearchStore";
 import { PART_TABS } from "@/types/parts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { SummaryTab } from "@/components/part/tabs/SummaryTab";
 
 // ── 固定カルテパネル ─────────────────────────────────────────────
 function PartKartePanel() {
-  const { selectedBasic, selectedRemarks, detailLoading } = usePartSearchStore();
+  const { selectedBasic, selectedRemarks, detailLoading } =
+    usePartSearchStore();
 
   if (detailLoading) {
     return (
-      <div className="p-4 space-y-2 border-b border-border">
+      <div className="p-3 space-y-2 border-b border-border">
         <Skeleton className="h-4 w-48" />
         <Skeleton className="h-4 w-full" />
         <Skeleton className="h-4 w-3/4" />
@@ -21,7 +23,7 @@ function PartKartePanel() {
 
   if (!selectedBasic) {
     return (
-      <div className="flex items-center justify-center h-32 text-sm text-muted-foreground border-b border-border">
+      <div className="flex items-center justify-center h-24 text-xs text-muted-foreground border-b border-border">
         左の検索から部品を選択してください
       </div>
     );
@@ -32,33 +34,46 @@ function PartKartePanel() {
   return (
     <div className="border-b border-border bg-background shrink-0">
       {/* 識別バー */}
-      <div className="flex items-center gap-3 px-4 py-2 bg-muted/50 border-b border-border">
+      <div className="flex items-center gap-2 px-3 py-2 bg-muted/30 border-b border-border">
         <span className="font-mono font-bold text-sm">#{b.部品ID}</span>
         <span className="text-xs text-muted-foreground">{b.図面番号 ?? "—"}</span>
-        <span className="text-sm font-medium truncate max-w-64">{b.名称 ?? "—"}</span>
-        {b.旧型区分 && <Badge variant="secondary" className="text-[10px]">旧型</Badge>}
-        {b.特別品区分 && <Badge variant="secondary" className="text-[10px]">特別品</Badge>}
-        {b.廃止部品区分 && <Badge variant="destructive" className="text-[10px]">廃止</Badge>}
-        <span className="ml-auto text-[11px] text-muted-foreground">
+        <span className="text-xs font-medium truncate max-w-48 xl:max-w-72">
+          {b.名称 ?? "—"}
+        </span>
+        {b.旧型区分 && (
+          <Badge variant="secondary" className="text-[10px] h-4 px-1">旧型</Badge>
+        )}
+        {b.特別品区分 && (
+          <Badge variant="secondary" className="text-[10px] h-4 px-1">特別品</Badge>
+        )}
+        {b.廃止部品区分 && (
+          <Badge variant="destructive" className="text-[10px] h-4 px-1">廃止</Badge>
+        )}
+        <span className="ml-auto text-[10px] text-muted-foreground whitespace-nowrap">
           更新: {b.更新日付 ?? "—"} {b.更新者 ? `(${b.更新者})` : ""}
         </span>
       </div>
 
       {/* 基本情報グリッド */}
-      <div className="grid grid-cols-4 gap-x-4 gap-y-1 px-4 py-2 text-xs">
+      <div className="grid grid-cols-4 xl:grid-cols-6 gap-x-3 gap-y-1 px-3 py-2 text-xs">
         <Field label="得意先" value={b.得意先名} />
         <Field label="主機種型式" value={b.主機種型式} />
-        <Field label="現在在庫" value={b.現在在庫数} highlight={b.現在在庫数 === 0} />
-        <Field label="部品重量" value={b.部品重量 != null ? `${b.部品重量} kg` : null} />
+        <Field
+          label="現在在庫"
+          value={b.現在在庫数}
+          highlight={b.現在在庫数 === 0}
+        />
+        <Field
+          label="部品重量"
+          value={b.部品重量 != null ? `${b.部品重量} kg` : null}
+        />
         <Field label="材質" value={b.材質} />
-        <Field label="材料名称" value={b.材料名称} />
-        <Field label="材料型式" value={b.材料型式} />
-        <Field label="作成日" value={b.作成日} />
+        <Field label="材料サイズ" value={b.材料サイズ} />
       </div>
 
       {/* 備考エリア */}
       {selectedRemarks && (
-        <div className="grid grid-cols-2 gap-x-4 px-4 pb-2 text-xs">
+        <div className="grid grid-cols-2 gap-x-3 px-3 pb-2 text-xs">
           <RemarkField
             label="工程用備考"
             items={selectedRemarks.workProgress}
@@ -126,10 +141,10 @@ function SubTabs() {
         <button
           key={tab.id}
           onClick={() => setActiveTab(tab.id)}
-          className={`px-3 py-2 text-xs whitespace-nowrap border-r border-border transition-colors ${
+          className={`px-3 py-2 text-[11px] whitespace-nowrap border-r border-border/50 transition-colors ${
             activeTab === tab.id
               ? "bg-background font-semibold border-b-2 border-b-primary text-primary"
-              : "text-muted-foreground hover:bg-muted"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
           }`}
         >
           {tab.label}
@@ -139,11 +154,12 @@ function SubTabs() {
   );
 }
 
-// ── タブコンテンツ（暫定表示）───────────────────────────────────
+// ── タブコンテンツ ──────────────────────────────────────────────
 function TabContent() {
   const { activeTab, selectedPartId, detailLoading } = usePartSearchStore();
 
   if (!selectedPartId) return null;
+
   if (detailLoading) {
     return (
       <div className="p-4 space-y-2">
@@ -154,11 +170,16 @@ function TabContent() {
     );
   }
 
-  const tab = PART_TABS.find((t) => t.id === activeTab);
+  // ── サマリータブ（実装済み）──
+  if (activeTab === "summary") {
+    return <SummaryTab />;
+  }
 
+  // ── その他タブ（Step 8-3以降で実装予定）──
+  const tab = PART_TABS.find((t) => t.id === activeTab);
   return (
     <div className="flex-1 overflow-auto p-4">
-      <div className="text-sm text-muted-foreground">
+      <div className="text-xs text-muted-foreground">
         📋 [{tab?.label}] タブ — 実装中
       </div>
       <div className="mt-2 text-xs text-muted-foreground">
@@ -170,11 +191,21 @@ function TabContent() {
 
 // ── メインビューポート ────────────────────────────────────────────
 export function MainViewport() {
+  const { selectedPartId } = usePartSearchStore();
+
   return (
     <main className="flex-1 flex flex-col overflow-hidden">
       <PartKartePanel />
       <SubTabs />
-      <TabContent />
+      <div className="flex-1 overflow-hidden min-h-0">
+        {selectedPartId ? (
+          <TabContent />
+        ) : (
+          <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
+            部品を選択してください
+          </div>
+        )}
+      </div>
     </main>
   );
 }
