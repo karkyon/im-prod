@@ -10,13 +10,15 @@
     "lint": "eslint src"
   },
   "dependencies": {
+    "cors": "^2.8.5",
     "express": "^5.1.0",
-    "cors": "^2.8.5"
+    "mssql": "^12.2.1"
   },
   "devDependencies": {
-    "@types/express": "^5.0.0",
     "@types/cors": "^2.8.17",
-    "typescript": "^5.9.3",
-    "tsx": "^4.21.0"
+    "@types/express": "^5.0.0",
+    "@types/mssql": "^9.1.11",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
   }
 }
