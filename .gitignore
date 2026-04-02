@@ -34,3 +34,6 @@ Thumbs.db
 
 # pnpm
 pnpm-lock.yaml.backup
+
+# VS Code 個人設定（extensions.jsonのみ管理対象）
+.vscode/settings.json
