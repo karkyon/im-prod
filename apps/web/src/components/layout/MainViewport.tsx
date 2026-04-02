@@ -1,13 +1,20 @@
 "use client";
 
+// ================================================================
+// MainViewport - QualityTab追加 + CSV出力ボタン付きタブバー
+// apps/web/src/components/layout/MainViewport.tsx
+// ================================================================
+
 import { usePartSearchStore } from "@/stores/partSearchStore";
 import { PART_TABS } from "@/types/parts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Download } from "lucide-react";
 import { SummaryTab } from "@/components/part/tabs/SummaryTab";
 import { BasicInfoTab } from "@/components/part/tabs/BasicInfoTab";
 import { MaterialsTab } from "@/components/part/tabs/MaterialsTab";
 import { ProcessesTab } from "@/components/part/tabs/ProcessesTab";
+import { QualityTab } from "@/components/part/tabs/QualityTab";
 import {
   ProductionHistoryTab,
   OrdersTab,
@@ -18,6 +25,14 @@ import {
   WipTab,
   DiagramsTab,
 } from "@/components/part/tabs/HistoryTabs";
+import {
+  exportOrdersCsv,
+  exportInventoryCsv,
+  exportProductionCsv,
+  exportPriceHistoryCsv,
+  exportCancellationsCsv,
+  exportPickingCsv,
+} from "@/services/csvExport";
 
 // ── 固定カルテパネル ─────────────────────────────────────────────
 function PartKartePanel() {
@@ -88,9 +103,14 @@ function PartKartePanel() {
           unit="個"
           highlight={b.現在在庫数 === 0}
         />
+        {/* 部品重量: 0 の場合は「—」表示に統一 */}
         <Field
           label="部品重量"
-          value={b.部品重量 != null ? `${b.部品重量} kg` : null}
+          value={
+            b.部品重量 != null && b.部品重量 > 0
+              ? `${b.部品重量} kg`
+              : null
+          }
         />
         <Field label="材質" value={b.材質} />
         <Field label="材料サイズ" value={b.材料サイズ} />
@@ -173,34 +193,82 @@ function RemarkField({
   );
 }
 
-// ── サブタブ ─────────────────────────────────────────────────────
+// ── サブタブ + CSV出力ボタン ─────────────────────────────────────
 function SubTabs() {
-  const { activeTab, setActiveTab, selectedPartId, tabLoadState } =
-    usePartSearchStore();
+  const {
+    activeTab,
+    setActiveTab,
+    selectedPartId,
+    tabLoadState,
+    selectedOrders,
+    selectedInventoryMovements,
+    selectedProductionHistory,
+    selectedPriceHistory,
+    selectedCancellations,
+    selectedPickingHistory,
+  } = usePartSearchStore();
 
   if (!selectedPartId) return null;
 
+  // CSV出力できるタブとそのデータのマッピング
+  const csvHandlers: Partial<Record<string, () => void>> = {
+    orders: () =>
+      selectedOrders && exportOrdersCsv(selectedOrders, selectedPartId),
+    inventory: () =>
+      selectedInventoryMovements &&
+      exportInventoryCsv(selectedInventoryMovements, selectedPartId),
+    production: () =>
+      selectedProductionHistory &&
+      exportProductionCsv(selectedProductionHistory, selectedPartId),
+    priceHistory: () =>
+      selectedPriceHistory &&
+      exportPriceHistoryCsv(selectedPriceHistory, selectedPartId),
+    cancellations: () =>
+      selectedCancellations &&
+      exportCancellationsCsv(selectedCancellations, selectedPartId),
+    picking: () =>
+      selectedPickingHistory &&
+      exportPickingCsv(selectedPickingHistory, selectedPartId),
+  };
+
+  const currentCsvHandler = csvHandlers[activeTab];
+
   return (
-    <div className="flex border-b border-border overflow-x-auto shrink-0 bg-background">
-      {PART_TABS.map((tab) => {
-        const isLoading = tabLoadState[tab.id]?.loading;
-        return (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`relative px-3 py-2 text-[11px] whitespace-nowrap border-r border-border/50 transition-colors ${
-              activeTab === tab.id
-                ? "bg-background font-semibold border-b-2 border-b-primary text-primary"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-            }`}
-          >
-            {tab.label}
-            {isLoading && (
-              <span className="ml-1 inline-block w-1.5 h-1.5 rounded-full bg-primary/60 animate-pulse" />
-            )}
-          </button>
-        );
-      })}
+    <div className="flex items-center border-b border-border shrink-0 bg-background">
+      {/* タブ一覧（横スクロール） */}
+      <div className="flex overflow-x-auto flex-1 min-w-0 scroll-thin">
+        {PART_TABS.map((tab) => {
+          const isLoading = tabLoadState[tab.id]?.loading;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`relative px-3 py-2 text-[11px] whitespace-nowrap border-r border-border/50 transition-colors shrink-0 ${
+                activeTab === tab.id
+                  ? "bg-background font-semibold border-b-2 border-b-primary text-primary"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+            >
+              {tab.label}
+              {isLoading && (
+                <span className="ml-1 inline-block w-1.5 h-1.5 rounded-full bg-primary/60 animate-pulse" />
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* CSV出力ボタン（対応タブのみ表示） */}
+      {currentCsvHandler && (
+        <button
+          onClick={currentCsvHandler}
+          className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 text-[11px] border-l border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          title="現在のタブをCSV出力"
+        >
+          <Download size={12} />
+          <span className="hidden xl:inline">CSV</span>
+        </button>
+      )}
     </div>
   );
 }
@@ -222,19 +290,20 @@ function TabContent() {
   }
 
   switch (activeTab) {
-    case "summary":      return <SummaryTab />;
-    case "basic":        return <BasicInfoTab />;
-    case "materials":    return <MaterialsTab />;
-    case "processes":    return <ProcessesTab />;
-    case "production":   return <ProductionHistoryTab />;
-    case "orders":       return <OrdersTab />;
-    case "inventory":    return <InventoryTab />;
-    case "picking":      return <PickingHistoryTab />;
-    case "cancellations":return <CancellationsTab />;
-    case "priceHistory": return <PriceHistoryTab />;
-    case "wip":          return <WipTab />;
-    case "diagrams":     return <DiagramsTab />;
-    default:             return null;
+    case "summary":       return <SummaryTab />;
+    case "basic":         return <BasicInfoTab />;
+    case "materials":     return <MaterialsTab />;
+    case "processes":     return <ProcessesTab />;
+    case "production":    return <ProductionHistoryTab />;
+    case "orders":        return <OrdersTab />;
+    case "inventory":     return <InventoryTab />;
+    case "picking":       return <PickingHistoryTab />;
+    case "cancellations": return <CancellationsTab />;
+    case "priceHistory":  return <PriceHistoryTab />;
+    case "wip":           return <WipTab />;
+    case "diagrams":      return <DiagramsTab />;
+    case "quality":       return <QualityTab />;  // F-08
+    default:              return null;
   }
 }
 

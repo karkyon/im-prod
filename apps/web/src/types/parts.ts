@@ -1,6 +1,7 @@
 // ================================================================
 // 部品情報Webシステム - TypeScript型定義
 // APIレスポンス型はapps/api/src/repositories/*.tsと整合
+// quality タブ追加済み (F-08)
 // ================================================================
 
 // ── 検索一覧 ────────────────────────────────────────────────────
@@ -119,7 +120,8 @@ export type PartMainTab =
   | "cancellations"
   | "priceHistory"
   | "wip"
-  | "diagrams";
+  | "diagrams"
+  | "quality";  // F-08 追加
 
 export const PART_TABS: { id: PartMainTab; label: string }[] = [
   { id: "summary",       label: "サマリー" },
@@ -134,4 +136,5 @@ export const PART_TABS: { id: PartMainTab; label: string }[] = [
   { id: "priceHistory",  label: "単価改定履歴" },
   { id: "wip",           label: "製造進捗/仕掛" },
   { id: "diagrams",      label: "工程指示図" },
+  { id: "quality",       label: "不具合" },  // F-08 追加
 ];

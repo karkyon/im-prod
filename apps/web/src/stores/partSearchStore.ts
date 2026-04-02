@@ -1,5 +1,6 @@
 // ================================================================
-// Zustand 状態管理ストア - 全タブ対応完全版
+// Zustand 状態管理ストア - quality タブ対応完全版
+// apps/web/src/stores/partSearchStore.ts
 // ================================================================
 "use client";
 
@@ -83,18 +84,19 @@ const DEFAULT_CONDITIONS: PartSearchParams = {
 };
 
 const initialTabLoadState = (): Record<PartMainTab, TabLoadState> => ({
-  summary: { loaded: false, loading: false, error: null },
-  basic: { loaded: false, loading: false, error: null },
-  materials: { loaded: false, loading: false, error: null },
-  processes: { loaded: false, loading: false, error: null },
-  production: { loaded: false, loading: false, error: null },
-  orders: { loaded: false, loading: false, error: null },
-  inventory: { loaded: false, loading: false, error: null },
-  picking: { loaded: false, loading: false, error: null },
+  summary:       { loaded: false, loading: false, error: null },
+  basic:         { loaded: false, loading: false, error: null },
+  materials:     { loaded: false, loading: false, error: null },
+  processes:     { loaded: false, loading: false, error: null },
+  production:    { loaded: false, loading: false, error: null },
+  orders:        { loaded: false, loading: false, error: null },
+  inventory:     { loaded: false, loading: false, error: null },
+  picking:       { loaded: false, loading: false, error: null },
   cancellations: { loaded: false, loading: false, error: null },
-  priceHistory: { loaded: false, loading: false, error: null },
-  wip: { loaded: false, loading: false, error: null },
-  diagrams: { loaded: false, loading: false, error: null },
+  priceHistory:  { loaded: false, loading: false, error: null },
+  wip:           { loaded: false, loading: false, error: null },
+  diagrams:      { loaded: false, loading: false, error: null },
+  quality:       { loaded: false, loading: false, error: null }, // F-08
 });
 
 export const usePartSearchStore = create<PartSearchStore>((set, get) => ({
@@ -188,11 +190,11 @@ export const usePartSearchStore = create<PartSearchStore>((set, get) => ({
         selectedWip: wip,
         tabLoadState: {
           ...get().tabLoadState,
-          summary: { loaded: true, loading: false, error: null },
-          basic: { loaded: true, loading: false, error: null },
+          summary:   { loaded: true, loading: false, error: null },
+          basic:     { loaded: true, loading: false, error: null },
           materials: { loaded: true, loading: false, error: null },
           processes: { loaded: true, loading: false, error: null },
-          wip: { loaded: true, loading: false, error: null },
+          wip:       { loaded: true, loading: false, error: null },
         },
       });
     } catch (e) {
@@ -207,6 +209,8 @@ export const usePartSearchStore = create<PartSearchStore>((set, get) => ({
     set({ activeTab: tab });
     const { selectedPartId, tabLoadState } = get();
     if (!selectedPartId) return;
+    // quality タブは QualityTab 内部で独自フェッチするためスキップ
+    if (tab === "quality") return;
     if (!tabLoadState[tab].loaded && !tabLoadState[tab].loading) {
       get().loadTabData(tab);
     }

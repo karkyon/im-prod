@@ -1,9 +1,17 @@
 "use client";
 
-import { Search, X, ChevronDown, ChevronUp } from "lucide-react";
-import { useState } from "react";
+// ================================================================
+// SearchSidebar - 検索条件保存(F-02) + CSV出力ボタン追加版
+// apps/web/src/components/layout/SearchSidebar.tsx
+// ================================================================
+
+import { Search, X, ChevronDown, ChevronUp, Download } from "lucide-react";
+import { useEffect, useState } from "react";
 import { usePartSearchStore } from "@/stores/partSearchStore";
+import { useSavedSearchStore } from "@/stores/savedSearchStore";
 import { PartsSearchTable } from "@/components/tables/PartsSearchTable";
+import { SavedSearchPanel } from "@/components/layout/SavedSearchPanel";
+import { exportPartsListCsv } from "@/services/csvExport";
 
 export function SearchSidebar() {
   const {
@@ -20,7 +28,24 @@ export function SearchSidebar() {
     selectPart,
   } = usePartSearchStore();
 
+  const { loadFromStorage, getDefault, savedSearches } = useSavedSearchStore();
+
   const [showMore, setShowMore] = useState(false);
+
+  // マウント時に保存条件を読み込み、デフォルト条件があれば適用
+  useEffect(() => {
+    loadFromStorage();
+  }, [loadFromStorage]);
+
+  useEffect(() => {
+    // savedSearches が読み込まれた後にデフォルト条件を適用
+    const def = getDefault();
+    if (def) {
+      setConditions(def.conditions);
+      executeSearch(1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedSearches.length]);
 
   if (!sidebarOpen) return null;
 
@@ -33,6 +58,11 @@ export function SearchSidebar() {
     if (e.key === "Enter") {
       executeSearch(1);
     }
+  };
+
+  const handleCsvExport = () => {
+    if (results.length === 0) return;
+    exportPartsListCsv(results);
   };
 
   return (
@@ -78,9 +108,7 @@ export function SearchSidebar() {
               type="text"
               placeholder="得意先名"
               value={conditions.customer ?? ""}
-              onChange={(e) =>
-                setConditions({ customer: e.target.value })
-              }
+              onChange={(e) => setConditions({ customer: e.target.value })}
               className="w-full px-2 py-1.5 text-xs border border-input rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-ring"
             />
             <input
@@ -142,12 +170,25 @@ export function SearchSidebar() {
           >
             <X size={13} />
           </button>
+          {/* CSV出力ボタン */}
+          <button
+            type="button"
+            onClick={handleCsvExport}
+            disabled={results.length === 0}
+            className="px-2.5 py-1.5 text-xs border border-input rounded-md hover:bg-muted transition-colors disabled:opacity-30"
+            title={`一覧をCSV出力 (${results.length}件)`}
+          >
+            <Download size={13} />
+          </button>
         </div>
 
         {searchError && (
           <p className="text-[11px] text-destructive">{searchError}</p>
         )}
       </form>
+
+      {/* F-02 保存条件パネル */}
+      <SavedSearchPanel currentConditions={conditions} />
 
       {/* 検索結果テーブル（TanStack Table） */}
       <div className="flex-1 min-h-0 overflow-hidden">
