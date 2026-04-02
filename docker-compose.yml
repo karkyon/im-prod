@@ -1,0 +1,105 @@
+# im-prod / docker-compose.yml
+# ポート割当: web=3040, api=3041, nginx=8040, pg=5441, redis=6391
+name: im-prod
+
+services:
+  # ─── フロントエンド: Next.js ──────────────────────
+  web:
+    build:
+      context: .
+      dockerfile: infra/docker/web.Dockerfile
+    container_name: im-prod-web
+    working_dir: /workspace
+    volumes:
+      - ./:/workspace
+      - /workspace/node_modules
+      - /workspace/apps/web/.next
+    command: pnpm --dir apps/web dev
+    ports:
+      - "3040:3040"
+    environment:
+      - PORT=3040
+      - NODE_ENV=development
+    env_file:
+      - .env.local
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  # ─── バックエンド: API / BFF ──────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: infra/docker/api.Dockerfile
+    container_name: im-prod-api
+    working_dir: /workspace
+    volumes:
+      - ./:/workspace
+      - /workspace/node_modules
+    command: pnpm --dir apps/api dev
+    ports:
+      - "3041:3041"
+    environment:
+      - PORT=3041
+      - NODE_ENV=development
+    env_file:
+      - .env.local
+    restart: unless-stopped
+
+  # ─── リバースプロキシ: Nginx ──────────────────────
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: im-prod-nginx
+    ports:
+      - "8040:80"
+    volumes:
+      - ./infra/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - web
+      - api
+    restart: unless-stopped
+
+  # ─── PostgreSQL (将来用: 新規テーブル・ログ等) ────
+  postgres:
+    image: postgres:16-alpine
+    container_name: im-prod-postgres
+    ports:
+      - "5441:5432"
+    environment:
+      POSTGRES_DB: im_prod
+      POSTGRES_USER: im_prod_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-im_prod_pass_dev}
+    volumes:
+      - im_prod_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U im_prod_user -d im_prod"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ─── Redis (セッション・キャッシュ将来用) ─────────
+  redis:
+    image: redis:7-alpine
+    container_name: im-prod-redis
+    ports:
+      - "6391:6379"
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - im_prod_redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  im_prod_pgdata:
+    driver: local
+  im_prod_redis:
+    driver: local
+
+networks:
+  default:
+    name: im-prod-network
