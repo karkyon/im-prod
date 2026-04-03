@@ -1,16 +1,19 @@
 "use client";
 
 // ================================================================
-// MainViewport - QualityTab追加 + CSV出力ボタン付きタブバー
-// apps/web/src/components/layout/MainViewport.tsx
+// MainViewport
+// ①-B 識別バー: 図面番号のみ表示
+// ①-C 原価ID / 共通部品ID / 不適合ID を追加
+// ②-A 図面番号・名称をグリッドに追加
+// ②-B 作成日 + 旧型/特別品/廃止品バッジを目立つ配色で
+// ②-C 材質・材料サイズを削除
+// ③   サマリータブ廃止 (basic をデフォルトに)
 // ================================================================
 
 import { usePartSearchStore } from "@/stores/partSearchStore";
 import { PART_TABS } from "@/types/parts";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
 import { Download } from "lucide-react";
-import { SummaryTab } from "@/components/part/tabs/SummaryTab";
 import { BasicInfoTab } from "@/components/part/tabs/BasicInfoTab";
 import { MaterialsTab } from "@/components/part/tabs/MaterialsTab";
 import { ProcessesTab } from "@/components/part/tabs/ProcessesTab";
@@ -34,118 +37,19 @@ import {
   exportPickingCsv,
 } from "@/services/csvExport";
 
-// ── 固定カルテパネル ─────────────────────────────────────────────
-function PartKartePanel() {
-  const { selectedBasic, selectedRemarks, detailLoading } =
-    usePartSearchStore();
-
-  if (detailLoading) {
-    return (
-      <div className="p-3 space-y-2 border-b border-border shrink-0">
-        <Skeleton className="h-4 w-48" />
-        <Skeleton className="h-4 w-full" />
-        <Skeleton className="h-3 w-3/4" />
-      </div>
-    );
-  }
-
-  if (!selectedBasic) {
-    return (
-      <div className="flex items-center justify-center h-20 text-xs text-muted-foreground border-b border-border shrink-0">
-        左の検索から部品を選択してください
-      </div>
-    );
-  }
-
-  const b = selectedBasic;
-
-  return (
-    <div className="border-b border-border bg-background shrink-0">
-      {/* 識別バー */}
-      <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/30 border-b border-border">
-        <span className="font-mono font-bold text-sm">#{b.部品ID}</span>
-        <span className="text-[11px] text-muted-foreground font-mono">
-          {b.図面番号 ?? "—"}
-        </span>
-        <span className="text-xs font-medium truncate max-w-48 xl:max-w-72">
-          {b.名称 ?? "—"}
-        </span>
-        {b.旧型区分 && (
-          <Badge variant="secondary" className="text-[9px] h-4 px-1">旧型</Badge>
-        )}
-        {b.特別品区分 && (
-          <Badge variant="secondary" className="text-[9px] h-4 px-1">特別</Badge>
-        )}
-        {b.廃止部品区分 && (
-          <Badge variant="destructive" className="text-[9px] h-4 px-1">廃止</Badge>
-        )}
-        {b.現在在庫数 === 0 && (
-          <Badge
-            variant="outline"
-            className="text-[9px] h-4 px-1 text-amber-600 border-amber-400"
-          >
-            在庫0
-          </Badge>
-        )}
-        <span className="ml-auto text-[10px] text-muted-foreground whitespace-nowrap shrink-0">
-          更新: {b.更新日付 ?? "—"}
-          {b.更新者 ? ` (${b.更新者})` : ""}
-        </span>
-      </div>
-
-      {/* 基本情報グリッド */}
-      <div className="grid grid-cols-3 xl:grid-cols-6 gap-x-3 gap-y-1 px-3 py-2 text-xs">
-        <Field label="得意先" value={b.得意先名} />
-        <Field label="主機種型式" value={b.主機種型式} />
-        <Field
-          label="現在在庫"
-          value={b.現在在庫数}
-          unit="個"
-          highlight={b.現在在庫数 === 0}
-        />
-        {/* 部品重量: 0 の場合は「—」表示に統一 */}
-        <Field
-          label="部品重量"
-          value={
-            b.部品重量 != null && b.部品重量 > 0
-              ? `${b.部品重量} kg`
-              : null
-          }
-        />
-        <Field label="材質" value={b.材質} />
-        <Field label="材料サイズ" value={b.材料サイズ} />
-      </div>
-
-      {/* 備考（あれば表示） */}
-      {selectedRemarks &&
-        (selectedRemarks.workProgress.length > 0 ||
-          selectedRemarks.dispatch.length > 0) && (
-          <div className="grid grid-cols-2 gap-x-3 px-3 pb-2 text-xs">
-            <RemarkField
-              label="工程用備考"
-              items={selectedRemarks.workProgress}
-            />
-            <RemarkField
-              label="手配時周知"
-              items={selectedRemarks.dispatch}
-              urgent
-            />
-          </div>
-        )}
-    </div>
-  );
-}
-
+// ── フィールドコンポーネント ─────────────────────────────────────
 function Field({
   label,
   value,
   unit,
   highlight,
+  mono,
 }: {
   label: string;
   value: string | number | null | undefined;
   unit?: string;
   highlight?: boolean;
+  mono?: boolean;
 }) {
   const display = value != null && value !== "" ? String(value) : "—";
   return (
@@ -154,10 +58,10 @@ function Field({
       <div
         className={`font-medium truncate text-xs ${
           highlight ? "text-amber-600 font-bold" : "text-foreground"
-        }`}
+        } ${mono ? "font-mono" : ""}`}
       >
         {display}
-        {unit && value != null ? (
+        {unit && value != null && value !== "" ? (
           <span className="ml-0.5 font-normal text-muted-foreground text-[10px]">
             {unit}
           </span>
@@ -193,6 +97,103 @@ function RemarkField({
   );
 }
 
+// ── 固定カルテパネル ─────────────────────────────────────────────
+function PartKartePanel() {
+  const { selectedBasic: b, selectedRemarks: r, detailLoading } =
+    usePartSearchStore();
+
+  if (detailLoading) {
+    return (
+      <div className="p-3 space-y-2 border-b border-border shrink-0">
+        <Skeleton className="h-4 w-48" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-3 w-3/4" />
+      </div>
+    );
+  }
+
+  if (!b) {
+    return (
+      <div className="flex items-center justify-center h-14 text-xs text-muted-foreground border-b border-border shrink-0">
+        左の検索から部品を選択してください
+      </div>
+    );
+  }
+
+  return (
+    <div className="border-b border-border bg-background shrink-0">
+
+      {/* ①-B: 識別バー — 図面番号のみ */}
+      <div className="flex items-center gap-3 px-3 py-1.5 bg-muted/30 border-b border-border">
+        <span className="font-mono font-bold text-sm text-foreground">
+          {b.図面番号 ?? "—"}
+        </span>
+        {/* ②-B: 区分バッジ（目立つ配色） */}
+        {b.旧型区分 && (
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-300 dark:bg-amber-950/40 dark:text-amber-400">
+            旧型
+          </span>
+        )}
+        {b.特別品区分 && (
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 border border-blue-300 dark:bg-blue-950/40 dark:text-blue-400">
+            特別品
+          </span>
+        )}
+        {b.廃止部品区分 && (
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-300 dark:bg-red-950/40 dark:text-red-400">
+            廃止品
+          </span>
+        )}
+        {b.現在在庫数 === 0 && (
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 border border-orange-300 dark:bg-orange-950/40 dark:text-orange-400">
+            在庫0
+          </span>
+        )}
+        <span className="ml-auto text-[10px] text-muted-foreground whitespace-nowrap shrink-0">
+          更新: {b.更新日付 ?? "—"}
+          {b.更新者 ? ` (${b.更新者})` : ""}
+        </span>
+      </div>
+
+      {/* ②-A ②-C ①-C: 基本情報グリッド */}
+      <div className="grid grid-cols-3 xl:grid-cols-6 gap-x-3 gap-y-1.5 px-3 py-2 text-xs">
+        {/* ②-A: 図面番号・名称をグリッドに追加 */}
+        <Field label="部品ID"     value={b.部品ID}      mono />
+        <Field label="図面番号"   value={b.図面番号}    mono />
+        <Field label="名称"       value={b.名称} />
+        <Field label="得意先"     value={b.得意先名} />
+        <Field label="主機種型式" value={b.主機種型式} />
+        <Field
+          label={`現在在庫${b.現在在庫数 === 0 ? " ⚠" : ""}`}
+          value={b.現在在庫数}
+          unit="個"
+          highlight={b.現在在庫数 === 0}
+        />
+        {/* ②-B: 作成日 */}
+        <Field label="作成日" value={b.作成日} />
+        {/* 部品重量: 0 の場合は — 表示 */}
+        <Field
+          label="部品重量"
+          value={b.部品重量 != null && b.部品重量 > 0 ? `${b.部品重量} kg` : null}
+        />
+        {/* ①-C: 原価ID / 共通部品ID / 不適合ID */}
+        <Field label="原価ID"     value={b.原価ID}     mono />
+        <Field label="共通部品ID" value={b.共通部品ID} mono />
+        <Field label="不適合ID"   value={b.不適合ID}   mono />
+        {/* ②-C: 材質・材料サイズは削除 */}
+      </div>
+
+      {/* 備考（あれば表示） */}
+      {r && (r.workProgress.length > 0 || r.dispatch.length > 0) && (
+        <div className="grid grid-cols-2 gap-x-3 px-3 pb-2 text-xs">
+          <RemarkField label="工程用備考" items={r.workProgress} />
+          <RemarkField label="手配時周知" items={r.dispatch} urgent />
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── サブタブ + CSV出力ボタン ─────────────────────────────────────
 function SubTabs() {
   const {
@@ -210,7 +211,6 @@ function SubTabs() {
 
   if (!selectedPartId) return null;
 
-  // CSV出力できるタブとそのデータのマッピング
   const csvHandlers: Partial<Record<string, () => void>> = {
     orders: () =>
       selectedOrders && exportOrdersCsv(selectedOrders, selectedPartId),
@@ -237,6 +237,7 @@ function SubTabs() {
     <div className="flex items-center border-b border-border shrink-0 bg-background">
       {/* タブ一覧（横スクロール） */}
       <div className="flex overflow-x-auto flex-1 min-w-0 scroll-thin">
+        {/* ③ PART_TABS から summary が削除されているため自動的に非表示 */}
         {PART_TABS.map((tab) => {
           const isLoading = tabLoadState[tab.id]?.loading;
           return (
@@ -279,7 +280,7 @@ function TabContent() {
 
   if (!selectedPartId) return null;
 
-  if (detailLoading && activeTab === "summary") {
+  if (detailLoading && activeTab === "basic") {
     return (
       <div className="p-4 space-y-2">
         {[...Array(5)].map((_, i) => (
@@ -289,8 +290,8 @@ function TabContent() {
     );
   }
 
+  // ③ case "summary" を削除。デフォルトは "basic"
   switch (activeTab) {
-    case "summary":       return <SummaryTab />;
     case "basic":         return <BasicInfoTab />;
     case "materials":     return <MaterialsTab />;
     case "processes":     return <ProcessesTab />;
@@ -302,7 +303,7 @@ function TabContent() {
     case "priceHistory":  return <PriceHistoryTab />;
     case "wip":           return <WipTab />;
     case "diagrams":      return <DiagramsTab />;
-    case "quality":       return <QualityTab />;  // F-08
+    case "quality":       return <QualityTab />;
     default:              return null;
   }
 }

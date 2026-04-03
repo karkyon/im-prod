@@ -1,11 +1,11 @@
 "use client";
 
 // ================================================================
-// AppHeader - CSV出力ボタン追加版
-// apps/web/src/components/layout/AppHeader.tsx
+// AppHeader
+// ①-A 修正: ヘッダーから部品詳細情報を削除（PartKartePanelに表示を集約）
 // ================================================================
 
-import { Menu, Download, FileText } from "lucide-react";
+import { Menu, Download } from "lucide-react";
 import { usePartSearchStore } from "@/stores/partSearchStore";
 import {
   exportOrdersCsv,
@@ -19,7 +19,6 @@ import {
 export function AppHeader() {
   const {
     toggleSidebar,
-    selectedBasic,
     selectedPartId,
     activeTab,
     selectedOrders,
@@ -30,7 +29,6 @@ export function AppHeader() {
     selectedPickingHistory,
   } = usePartSearchStore();
 
-  /** 現在アクティブなタブに応じてCSV出力 */
   const handleTabCsv = () => {
     if (!selectedPartId) return;
     switch (activeTab) {
@@ -63,7 +61,6 @@ export function AppHeader() {
     }
   };
 
-  /** CSV出力が可能なタブかどうか */
   const csvAvailableTabs = [
     "orders",
     "inventory",
@@ -85,39 +82,18 @@ export function AppHeader() {
         <Menu size={18} />
       </button>
 
+      {/* ①-A: 部品詳細情報の重複表示を削除。詳細は PartKartePanel に集約 */}
       <span className="font-semibold text-sm text-foreground select-none">
         部品情報システム
       </span>
 
-      {selectedBasic && (
-        <div className="flex items-center gap-2 ml-4 text-xs text-muted-foreground">
-          <span className="font-mono font-bold text-foreground">
-            #{selectedBasic.部品ID}
-          </span>
-          <span className="text-border">|</span>
-          <span>{selectedBasic.図面番号 ?? "—"}</span>
-          <span className="text-border">|</span>
-          <span className="max-w-48 truncate">{selectedBasic.名称 ?? "—"}</span>
-          {/* 部品重量: 0の場合は表示しない */}
-          {selectedBasic.部品重量 != null && selectedBasic.部品重量 > 0 && (
-            <>
-              <span className="text-border">|</span>
-              <span className="text-muted-foreground">
-                {selectedBasic.部品重量} kg
-              </span>
-            </>
-          )}
-        </div>
-      )}
-
       {/* 右側ボタン群 */}
       <div className="ml-auto flex items-center gap-2">
-        {/* タブCSV出力ボタン */}
         {canExportCsv && (
           <button
             onClick={handleTabCsv}
             className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs border border-input rounded-md hover:bg-muted transition-colors text-muted-foreground"
-            title={`現在のタブをCSV出力`}
+            title="現在のタブをCSV出力"
           >
             <Download size={13} />
             CSV出力

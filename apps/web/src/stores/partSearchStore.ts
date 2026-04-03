@@ -1,8 +1,9 @@
-// ================================================================
-// Zustand 状態管理ストア - quality タブ対応完全版
-// apps/web/src/stores/partSearchStore.ts
-// ================================================================
 "use client";
+
+// ================================================================
+// Zustand 状態管理ストア
+// ③ サマリータブ廃止 → デフォルトタブを "basic" に変更
+// ================================================================
 
 import { create } from "zustand";
 import type {
@@ -38,7 +39,6 @@ interface TabLoadState {
 }
 
 interface PartSearchStore {
-  // ── 検索状態 ──
   sidebarOpen: boolean;
   conditions: PartSearchParams;
   results: PartListRow[];
@@ -47,7 +47,6 @@ interface PartSearchStore {
   loading: boolean;
   searchError: string | null;
 
-  // ── 選択部品状態 ──
   selectedPartId: number | null;
   selectedBasic: PartBasic | null;
   selectedRemarks: PartRemarks | null;
@@ -62,12 +61,10 @@ interface PartSearchStore {
   selectedPriceHistory: AnyData[] | null;
   selectedInstructionDiagrams: AnyData[] | null;
 
-  // ── タブ別ロード状態 ──
   tabLoadState: Record<PartMainTab, TabLoadState>;
   activeTab: PartMainTab;
   detailLoading: boolean;
 
-  // ── アクション ──
   toggleSidebar: () => void;
   setConditions: (v: Partial<PartSearchParams>) => void;
   clearConditions: () => void;
@@ -83,8 +80,8 @@ const DEFAULT_CONDITIONS: PartSearchParams = {
   limit: 50,
 };
 
+// ③ summary を削除
 const initialTabLoadState = (): Record<PartMainTab, TabLoadState> => ({
-  summary:       { loaded: false, loading: false, error: null },
   basic:         { loaded: false, loading: false, error: null },
   materials:     { loaded: false, loading: false, error: null },
   processes:     { loaded: false, loading: false, error: null },
@@ -96,11 +93,10 @@ const initialTabLoadState = (): Record<PartMainTab, TabLoadState> => ({
   priceHistory:  { loaded: false, loading: false, error: null },
   wip:           { loaded: false, loading: false, error: null },
   diagrams:      { loaded: false, loading: false, error: null },
-  quality:       { loaded: false, loading: false, error: null }, // F-08
+  quality:       { loaded: false, loading: false, error: null },
 });
 
 export const usePartSearchStore = create<PartSearchStore>((set, get) => ({
-  // ── 初期値 ──
   sidebarOpen: true,
   conditions: { ...DEFAULT_CONDITIONS },
   results: [],
@@ -124,21 +120,18 @@ export const usePartSearchStore = create<PartSearchStore>((set, get) => ({
   selectedInstructionDiagrams: null,
 
   tabLoadState: initialTabLoadState(),
-  activeTab: "summary",
+  activeTab: "basic", // ③ "summary" → "basic" に変更
   detailLoading: false,
 
-  // ── サイドバー開閉 ──
   toggleSidebar: () =>
     set((s) => ({ sidebarOpen: !s.sidebarOpen })),
 
-  // ── 検索条件更新 ──
   setConditions: (v) =>
     set((s) => ({ conditions: { ...s.conditions, ...v } })),
 
   clearConditions: () =>
     set({ conditions: { ...DEFAULT_CONDITIONS } }),
 
-  // ── 検索実行 ──
   executeSearch: async (page = 1) => {
     set({ loading: true, searchError: null });
     try {
@@ -152,12 +145,12 @@ export const usePartSearchStore = create<PartSearchStore>((set, get) => ({
     }
   },
 
-  // ── 部品選択（初期データ並列取得）──
+  // ③ デフォルトタブを "basic" に変更
   selectPart: async (partId) => {
     set({
       selectedPartId: partId,
       detailLoading: true,
-      activeTab: "summary",
+      activeTab: "basic", // ③ "summary" → "basic"
       selectedBasic: null,
       selectedRemarks: null,
       selectedMaterials: null,
@@ -173,7 +166,6 @@ export const usePartSearchStore = create<PartSearchStore>((set, get) => ({
       tabLoadState: initialTabLoadState(),
     });
     try {
-      // サマリータブに必要な全データを並列取得
       const [basic, remarks, materials, processes, wip] =
         await Promise.all([
           getPartBasic(partId),
@@ -190,7 +182,6 @@ export const usePartSearchStore = create<PartSearchStore>((set, get) => ({
         selectedWip: wip,
         tabLoadState: {
           ...get().tabLoadState,
-          summary:   { loaded: true, loading: false, error: null },
           basic:     { loaded: true, loading: false, error: null },
           materials: { loaded: true, loading: false, error: null },
           processes: { loaded: true, loading: false, error: null },
@@ -204,19 +195,16 @@ export const usePartSearchStore = create<PartSearchStore>((set, get) => ({
     }
   },
 
-  // ── タブ切替（未ロードなら自動フェッチ）──
   setActiveTab: async (tab) => {
     set({ activeTab: tab });
     const { selectedPartId, tabLoadState } = get();
     if (!selectedPartId) return;
-    // quality タブは QualityTab 内部で独自フェッチするためスキップ
-    if (tab === "quality") return;
+    if (tab === "quality") return; // QualityTab は内部でフェッチ
     if (!tabLoadState[tab].loaded && !tabLoadState[tab].loading) {
       get().loadTabData(tab);
     }
   },
 
-  // ── タブ別データ遅延ロード ──
   loadTabData: async (tab) => {
     const { selectedPartId } = get();
     if (!selectedPartId) return;

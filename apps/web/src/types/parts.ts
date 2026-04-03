@@ -1,10 +1,8 @@
 // ================================================================
 // 部品情報Webシステム - TypeScript型定義
-// APIレスポンス型はapps/api/src/repositories/*.tsと整合
-// quality タブ追加済み (F-08)
+// ③ サマリータブ廃止 (基本情報タブに統合)
 // ================================================================
 
-// ── 検索一覧 ────────────────────────────────────────────────────
 export interface PartSearchParams {
   keyword?: string;
   partId?: number;
@@ -53,7 +51,6 @@ export interface PartSearchResult {
   limit: number;
 }
 
-// ── 基本情報 ─────────────────────────────────────────────────────
 export interface PartBasic {
   部品ID: number;
   工程ID: number | null;
@@ -80,7 +77,6 @@ export interface PartBasic {
   更新者: string | null;
   現在在庫数: number;
   共通部品在庫数: number;
-  // 材料情報（JOIN）
   mat材料ID: number | null;
   材質ID: number | null;
   材質: string | null;
@@ -93,7 +89,6 @@ export interface PartBasic {
   材料備考: string | null;
 }
 
-// ── 備考 ─────────────────────────────────────────────────────────
 export interface RemarkItem {
   id: number;
   no: number;
@@ -101,15 +96,14 @@ export interface RemarkItem {
 }
 
 export interface PartRemarks {
-  workProgress: RemarkItem[];  // 工程用備考
-  order: RemarkItem[];         // 注文用備考
-  dispatch: RemarkItem[];      // 手配時周知情報
-  delivery: RemarkItem[];      // 出荷用備考
+  workProgress: RemarkItem[];
+  order: RemarkItem[];
+  dispatch: RemarkItem[];
+  delivery: RemarkItem[];
 }
 
-// ── UI状態 ───────────────────────────────────────────────────────
+// ③ "summary" を廃止 — 基本情報タブ(basic)に内容統合済み
 export type PartMainTab =
-  | "summary"
   | "basic"
   | "materials"
   | "processes"
@@ -121,10 +115,9 @@ export type PartMainTab =
   | "priceHistory"
   | "wip"
   | "diagrams"
-  | "quality";  // F-08 追加
+  | "quality";
 
 export const PART_TABS: { id: PartMainTab; label: string }[] = [
-  { id: "summary",       label: "サマリー" },
   { id: "basic",         label: "基本情報" },
   { id: "materials",     label: "材料/副資材" },
   { id: "processes",     label: "工程/外注見積" },
@@ -136,5 +129,5 @@ export const PART_TABS: { id: PartMainTab; label: string }[] = [
   { id: "priceHistory",  label: "単価改定履歴" },
   { id: "wip",           label: "製造進捗/仕掛" },
   { id: "diagrams",      label: "工程指示図" },
-  { id: "quality",       label: "不具合" },  // F-08 追加
+  { id: "quality",       label: "不具合" },
 ];
