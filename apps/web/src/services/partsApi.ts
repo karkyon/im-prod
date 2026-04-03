@@ -112,3 +112,9 @@ export async function getWip(partId: number): Promise<any[]> {
 export async function getInstructionDiagrams(partId: number): Promise<any[]> {
   return apiFetch(`/api/parts/${partId}/instruction-diagrams`);
 }
+
+// ── 不具合一覧 (F-08) ────────────────────────────────────────────
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function getIssues(partId: number): Promise<any[]> {
+  return apiFetch(`/api/parts/${partId}/issues`);
+}

@@ -16,6 +16,7 @@ import {
   getPriceHistory,
   getWip,
   getInstructionDiagrams,
+  getIssues,
 } from "../repositories/part-history.repository.js";
 
 const router = Router();
@@ -185,6 +186,16 @@ router.get("/:id/instruction-diagrams", async (req, res) => {
   const id = pid(req);
   if (!id) return err400(res);
   try { res.json(await getInstructionDiagrams(id)); }
+  catch (e) { err500(res, e); }
+});
+
+// ────────────────────────────────────────────────
+// GET /api/parts/:id/issues   ← F-08 追加
+// ────────────────────────────────────────────────
+router.get("/:id/issues", async (req, res) => {
+  const id = pid(req);
+  if (!id) return err400(res);
+  try { res.json(await getIssues(id)); }
   catch (e) { err500(res, e); }
 });
 

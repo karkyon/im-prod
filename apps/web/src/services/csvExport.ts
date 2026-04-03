@@ -112,7 +112,8 @@ export function exportPartsListCsv(rows: PartListRow[]): void {
   const csvRows = rows.map((row) => {
     const mapped: Record<string, unknown> = {};
     headers.forEach((key, i) => {
-      const val = (row as Record<string, unknown>)[key];
+      const val = row[key as keyof PartListRow];
+
       if (typeof val === "boolean") {
         mapped[headerLabels[i]] = val ? "○" : "";
       } else {

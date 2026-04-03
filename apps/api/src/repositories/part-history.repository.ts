@@ -260,3 +260,66 @@ export async function getInstructionDiagrams(partId: number) {
     available: !!r.ファイルパス,
   }));
 }
+
+// ════════════════════════════════════════════════
+// 14. 不具合一覧 (F-08)
+// ════════════════════════════════════════════════
+export async function getIssues(partId: number) {
+  const pool = await getPool();
+
+  // 部品不適合テーブルのスキーマに合わせてクエリを組む
+  // カラム名が不明な場合は汎用的なSELECTで取得してNode側で整形
+  try {
+    const result = await pool.request()
+      .input("partId", sql.Int, partId)
+      .query(`
+        SELECT
+          ni.不適合ID,
+          ni.部品ID,
+          CASE ISNULL(ni.不適合状態区分, 0)
+            WHEN 0 THEN '未対応'
+            WHEN 1 THEN '調査中'
+            WHEN 2 THEN '対応済'
+            WHEN 3 THEN '再発監視'
+            ELSE '未対応'
+          END AS 状態,
+          CONVERT(varchar(10), ni.発生日付, 111) AS 発生日,
+          pc.工程 AS 工程,
+          CASE ISNULL(ni.優先度区分, 2)
+            WHEN 1 THEN '高'
+            WHEN 2 THEN '中'
+            WHEN 3 THEN '低'
+            ELSE '中'
+          END AS 優先度,
+          ni.不具合内容 AS 内容,
+          ni.原因 AS 原因,
+          ni.再発防止 AS 再発防止,
+          ni.担当者 AS 担当者,
+          CONVERT(varchar(10), ni.完了日付, 111) AS 完了日,
+          ni.備考 AS 備考
+        FROM 部品不適合 ni
+        LEFT JOIN 部品工程 pc
+          ON ni.工程ID = pc.工程ID
+          AND ni.工程No = pc.工程No
+        WHERE ni.部品ID = @partId
+        ORDER BY ni.発生日付 DESC
+      `);
+    return result.recordset;
+  } catch (err) {
+    // テーブル構造が異なる場合のフォールバック
+    console.warn("部品不適合テーブルクエリ失敗、シンプルクエリで再試行:", err);
+    try {
+      const result2 = await pool.request()
+        .input("partId", sql.Int, partId)
+        .query(`
+          SELECT *
+          FROM 部品不適合
+          WHERE 部品ID = @partId
+          ORDER BY 不適合ID DESC
+        `);
+      return result2.recordset;
+    } catch {
+      return [];
+    }
+  }
+}
